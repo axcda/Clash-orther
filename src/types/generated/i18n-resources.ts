@@ -7,8 +7,12 @@ export interface TranslationResources {
       components: {
         actions: {
           active: string
+          addDirectRule: string
+          addProcessRule: string
           closeConnection: string
           closed: string
+          directRuleAdded: string
+          processRuleAdded: string
         }
         columnManager: {
           dragHandle: string
@@ -1345,6 +1349,34 @@ export interface TranslationResources {
           tooltips: {
             open: string
           }
+        }
+        processRules: {
+          added: string
+          addModeLabel: string
+          addRunning: string
+          alreadyAdded: string
+          browseExe: string
+          diagnosticTip: string
+          duplicate: string
+          empty: string
+          enableTun: string
+          fetchError: string
+          filterAll: string
+          filterDirect: string
+          filterProxy: string
+          manualAdd: string
+          manualAddTitle: string
+          noProcFound: string
+          procNameLabel: string
+          searchPlaceholder: string
+          selectError: string
+          selectRunningTitle: string
+          targetDirect: string
+          targetProxy: string
+          targetReject: string
+          title: string
+          tunEnabled: string
+          tunWarning: string
         }
         proxyControl: {
           actions: {

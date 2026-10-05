@@ -207,6 +207,19 @@ pub struct IVerge {
     pub hover_jump_navigator_delay: Option<u64>,
 
     pub enable_external_controller: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub process_proxy_rules: Option<Vec<ProcessRuleItem>>,
+}
+
+#[derive(Default, Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct ProcessRuleItem {
+    pub id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub target: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
@@ -493,6 +506,7 @@ impl IVerge {
         patch!(enable_dns_settings);
         patch!(home_cards);
         patch!(enable_external_controller);
+        patch!(process_proxy_rules);
     }
 
     pub fn get_log_level(&self) -> LevelFilter {

@@ -946,6 +946,21 @@ interface IVergeConfig {
   enable_hover_jump_navigator?: boolean
   hover_jump_navigator_delay?: number
   enable_external_controller?: boolean
+  process_proxy_rules?: IProcessRuleItem[]
+}
+
+interface IProcessRuleItem {
+  id: string
+  name: string
+  enabled: boolean
+  target: string
+  path?: string
+}
+
+interface IRunningProcessItem {
+  pid: number
+  name: string
+  path?: string
 }
 
 interface IWebDavFile {

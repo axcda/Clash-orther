@@ -144,7 +144,7 @@ fn determine_update_flags(patch: &IVerge) -> UpdateFlags {
     if restart_core_needed {
         update_flags.insert(UpdateFlags::RESTART_CORE);
     }
-    if tun_mode.is_some() {
+    if tun_mode.is_some() || patch.process_proxy_rules.is_some() {
         update_flags.insert(UpdateFlags::CLASH_CONFIG | UpdateFlags::GROUP_SYS_TRAY);
     }
     if enable_global_hotkey.is_some() || home_cards.is_some() {
@@ -210,6 +210,20 @@ async fn process_terminated_flags(update_flags: UpdateFlags, patch: &IVerge) -> 
     if update_flags.contains(UpdateFlags::CLASH_CONFIG) {
         CoreManager::global().update_config_checked().await?;
         handle::Handle::refresh_clash();
+        if patch.process_proxy_rules.is_some() {
+            let auto_close = Config::verge().await.latest_arc().auto_close_connection.unwrap_or(true);
+            if auto_close {
+                crate::process::AsyncHandler::spawn(move || async {
+                    if let Err(err) = handle::Handle::mihomo().close_all_connections().await {
+                        logging!(
+                            error,
+                            Type::Core,
+                            "Failed to close all connections after updating process rules: {err}"
+                        );
+                    }
+                });
+            }
+        }
     }
     if update_flags.contains(UpdateFlags::LAUNCH) {
         autostart::update_launch().await?;

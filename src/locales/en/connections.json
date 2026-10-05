@@ -24,7 +24,11 @@
     "actions": {
       "active": "Active",
       "closed": "Closed",
-      "closeConnection": "Close Connection"
+      "closeConnection": "Close Connection",
+      "addProcessRule": "Proxy Process",
+      "processRuleAdded": "Added proxy rule for {{name}}",
+      "addDirectRule": "Direct Process (Bypass)",
+      "directRuleAdded": "Set {{name}} to direct (bypass proxy)"
     },
     "columnManager": {
       "title": "Columns",

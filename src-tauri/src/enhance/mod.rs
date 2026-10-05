@@ -45,6 +45,7 @@ struct ConfigValues {
     redir_enabled: bool,
     #[cfg(target_os = "linux")]
     tproxy_enabled: bool,
+    process_proxy_rules: Option<Vec<crate::config::ProcessRuleItem>>,
 }
 
 #[derive(Debug)]
@@ -142,6 +143,8 @@ async fn get_config_values(profile_uid: &str) -> ConfigValues {
     #[cfg(target_os = "linux")]
     let tproxy_enabled = verge_arc.verge_tproxy_enabled.unwrap_or(false);
 
+    let process_proxy_rules = verge_arc.process_proxy_rules.clone();
+
     drop(verge_arc);
     drop(verge);
 
@@ -159,6 +162,7 @@ async fn get_config_values(profile_uid: &str) -> ConfigValues {
         redir_enabled,
         #[cfg(target_os = "linux")]
         tproxy_enabled,
+        process_proxy_rules,
     }
 }
 
@@ -893,6 +897,7 @@ pub async fn enhance(
         redir_enabled,
         #[cfg(target_os = "linux")]
         tproxy_enabled,
+        process_proxy_rules,
     } = cfg_vals;
 
     let profile = collect_profile_items(profiles).await?;
@@ -964,12 +969,190 @@ pub async fn enhance(
     let config = ensure_lan_bind_address(config);
 
     let config = cleanup_proxy_groups(config);
+    let config = apply_process_rules(config, process_proxy_rules.as_deref());
     let config = use_sort(config);
 
     let mut exists_keys_set = HashSet::new();
     exists_keys_set.extend(exists_keys);
 
     Ok((config, exists_keys_set, result_map, dns_override))
+}
+
+fn escape_regex_char(c: char) -> String {
+    match c {
+        '.' | '+' | '(' | ')' | '[' | ']' | '{' | '}' | '^' | '$' | '?' | '*' | '|' => {
+            format!("\\{c}").into()
+        }
+        _ => c.to_string().into(),
+    }
+}
+
+fn escape_path_for_regex(dir_str: &str) -> String {
+    let mut out = String::new();
+    for c in dir_str.chars() {
+        if c == '\\' || c == '/' {
+            out.push_str("[\\\\/]");
+        } else {
+            out.push_str(&escape_regex_char(c));
+        }
+    }
+    out
+}
+
+fn is_dedicated_app_dir(dir: &std::path::Path) -> bool {
+    if dir.components().count() < 3 {
+        return false;
+    }
+    let s = dir.to_string_lossy().to_lowercase();
+    if s.starts_with("c:\\windows") || s == "c:\\program files" || s == "c:\\program files (x86)" {
+        return false;
+    }
+    if s == "/bin"
+        || s == "/usr/bin"
+        || s == "/sbin"
+        || s == "/usr/sbin"
+        || s == "/usr/local/bin"
+        || s == "/applications"
+    {
+        return false;
+    }
+    if let Some(user_dir) = ::dirs::home_dir() {
+        let user_str = user_dir.to_string_lossy().to_lowercase();
+        if s == user_str || s == format!("{user_str}\\desktop") || s == format!("{user_str}\\downloads") {
+            return false;
+        }
+    }
+    true
+}
+
+fn apply_process_rules(
+    mut config: Mapping,
+    process_rules: Option<&[crate::config::ProcessRuleItem]>,
+) -> Mapping {
+    let Some(rules) = process_rules else {
+        return config;
+    };
+
+    let active_rules: Vec<&crate::config::ProcessRuleItem> = rules
+        .iter()
+        .filter(|r| r.enabled && !r.name.trim().is_empty())
+        .collect();
+
+    if active_rules.is_empty() {
+        return config;
+    }
+
+    config.insert(
+        Value::String("find-process-mode".into()),
+        Value::String("always".into()),
+    );
+
+    let rules_key = Value::String("rules".into());
+    let current_rules = match config.remove(&rules_key) {
+        Some(Value::Sequence(seq)) => seq,
+        _ => serde_yaml_ng::Sequence::new(),
+    };
+
+    let mut prepend_rules = serde_yaml_ng::Sequence::new();
+    let mut seen_rule_strings = std::collections::HashSet::new();
+
+    // Ensure DIRECT (bypass proxy) rules are evaluated with top priority
+    let mut sorted_rules = active_rules.clone();
+    sorted_rules.sort_by_key(|r| if r.target.eq_ignore_ascii_case("DIRECT") { 0 } else { 1 });
+
+    for rule in &sorted_rules {
+        let target = if rule.target.trim().is_empty() {
+            "PROXY"
+        } else {
+            rule.target.trim()
+        };
+
+        let mut add_rule = |rule_str: String| {
+            if seen_rule_strings.insert(rule_str.clone()) {
+                prepend_rules.push(Value::String(rule_str.into()));
+            }
+        };
+
+        let name = rule.name.trim();
+        if name.contains('\\') || name.contains('/') {
+            add_rule(format!("PROCESS-PATH,{name},{target}").into());
+        } else if name.contains('*') || name.contains('?') {
+            add_rule(format!("PROCESS-NAME-WILDCARD,{name},{target}").into());
+        } else {
+            add_rule(format!("PROCESS-NAME,{name},{target}").into());
+            #[cfg(target_os = "windows")]
+            {
+                if !name.to_lowercase().ends_with(".exe") && !name.contains('.') {
+                    add_rule(format!("PROCESS-NAME,{name}.exe,{target}").into());
+                }
+            }
+        }
+
+        if let Some(path_str) = &rule.path {
+            let path_trimmed = path_str.trim();
+            if !path_trimmed.is_empty() {
+                add_rule(format!("PROCESS-PATH,{path_trimmed},{target}").into());
+
+                let path_buf = std::path::PathBuf::from(path_trimmed);
+                if let Some(parent) = path_buf.parent()
+                    && is_dedicated_app_dir(parent)
+                {
+                    let escaped = escape_path_for_regex(&parent.to_string_lossy());
+                    add_rule(format!("PROCESS-PATH-REGEX,(?i)^{escaped}[\\\\/].*,{target}").into());
+                }
+            }
+        }
+    }
+
+    prepend_rules.extend(current_rules);
+    config.insert(rules_key, Value::Sequence(prepend_rules));
+    config
+}
+
+#[cfg(test)]
+mod process_rules_tests {
+    use super::{Mapping, Value, apply_process_rules};
+    use crate::config::ProcessRuleItem;
+
+    #[test]
+    fn test_process_rules_generation_with_subprocesses() {
+        let config = Mapping::new();
+        let rules = vec![
+            ProcessRuleItem {
+                id: "1".into(),
+                name: "Antigravity.exe".into(),
+                enabled: true,
+                target: "DIRECT".into(),
+                path: Some(r"C:\Users\User\AppData\Local\Programs\antigravity\Antigravity.exe".into()),
+            },
+            ProcessRuleItem {
+                id: "2".into(),
+                name: "curl".into(),
+                enabled: true,
+                target: "PROXY".into(),
+                path: None,
+            },
+        ];
+
+        let result = apply_process_rules(config, Some(&rules));
+        assert_eq!(
+            result.get(&Value::String("find-process-mode".into())),
+            Some(&Value::String("always".into()))
+        );
+
+        let rules_val = result.get(&Value::String("rules".into())).unwrap();
+        let rule_strings: Vec<std::string::String> = rules_val
+            .as_sequence()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_string())
+            .collect();
+
+        // Direct rules come first
+        assert!(rule_strings.contains(&"PROCESS-NAME,Antigravity.exe,DIRECT".to_string()));
+        assert!(rule_strings.iter().any(|r| r.starts_with("PROCESS-PATH-REGEX")));
+        assert!(rule_strings.contains(&"PROCESS-NAME,curl,PROXY".to_string()));
+    }
 }
 
 #[cfg(test)]

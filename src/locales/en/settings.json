@@ -152,6 +152,34 @@
           }
         }
       }
+    },
+    "processRules": {
+      "title": "Process Proxy Rules",
+      "duplicate": "Rule for this process already exists",
+      "added": "Added process rule: {{name}}",
+      "tunEnabled": "TUN mode enabled",
+      "enableTun": "Enable TUN Mode",
+      "tunWarning": "Process proxy relies on TUN mode for full traffic process matching. Enabling TUN mode is recommended.",
+      "addRunning": "Add Running Process",
+      "browseExe": "Select Executable (.exe)",
+      "manualAdd": "Manual Input",
+      "manualAddTitle": "Manual Process Rule",
+      "empty": "No process proxy rules yet. Click the buttons above to add.",
+      "selectRunningTitle": "Select Running Process",
+      "searchPlaceholder": "Search process name or path...",
+      "noProcFound": "No matching processes found",
+      "alreadyAdded": "Added",
+      "procNameLabel": "Process Name (e.g. chrome.exe)",
+      "fetchError": "Failed to fetch process list",
+      "selectError": "Failed to select file",
+      "targetDirect": "Direct (Bypass Proxy)",
+      "targetProxy": "Proxy",
+      "targetReject": "Reject",
+      "addModeLabel": "Add as",
+      "filterAll": "All",
+      "filterDirect": "Direct (Bypass)",
+      "filterProxy": "Proxy",
+      "diagnosticTip": "Tip: If an app runs background subprocesses (e.g. language_server in VS Code/Antigravity, game binaries), the system matches child processes in its folder and resets connections on save. You can also view the actual networking process in Connections."
     }
   },
   "components": {

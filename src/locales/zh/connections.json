@@ -24,7 +24,11 @@
     "actions": {
       "active": "活跃",
       "closed": "已关闭",
-      "closeConnection": "关闭连接"
+      "closeConnection": "关闭连接",
+      "addProcessRule": "代理此进程",
+      "processRuleAdded": "已为 {{name}} 添加代理规则",
+      "addDirectRule": "直连此进程 (不走代理)",
+      "directRuleAdded": "已设置 {{name}} 直连（不走代理）"
     },
     "columnManager": {
       "title": "列设置",

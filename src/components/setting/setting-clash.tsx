@@ -22,6 +22,7 @@ import { DnsViewer } from './mods/dns-viewer'
 import { HeaderConfiguration } from './mods/external-controller-cors'
 import { GuardState } from './mods/guard-state'
 import { NetworkInterfaceViewer } from './mods/network-interface-viewer'
+import { ProcessRulesViewer } from './mods/process-rules-viewer'
 import { SettingItem, SettingList } from './mods/setting-comp'
 import { TunnelsViewer } from './mods/tunnels-viewer'
 import { WebUIViewer } from './mods/web-ui-viewer'
@@ -67,6 +68,7 @@ const SettingClash = ({ onError }: Props) => {
   const dnsRef = useRef<DialogRef>(null)
   const corsRef = useRef<DialogRef>(null)
   const tunnelRef = useRef<DialogRef>(null)
+  const processRulesRef = useRef<DialogRef>(null)
 
   const onSwitchFormat = (_e: any, value: boolean) => value
   const onChangeData = (patch: Partial<IConfigData>) => {
@@ -118,6 +120,7 @@ const SettingClash = ({ onError }: Props) => {
       <ClashCoreViewer ref={coreRef} />
       <NetworkInterfaceViewer ref={networkRef} />
       <DnsViewer ref={dnsRef} />
+      <ProcessRulesViewer ref={processRulesRef} />
       <BaseDialog
         open={dnsConfirmation !== null}
         title={t('settings.modals.dns.protection.title')}
@@ -336,6 +339,11 @@ const SettingClash = ({ onError }: Props) => {
       <SettingItem
         label={t('settings.sections.clash.form.fields.tunnels.title')}
         onClick={() => tunnelRef.current?.open()}
+      />
+
+      <SettingItem
+        label={t('settings.sections.processRules.title')}
+        onClick={() => processRulesRef.current?.open()}
       />
     </SettingList>
   )

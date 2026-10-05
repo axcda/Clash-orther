@@ -1,10 +1,13 @@
 import { Box, Button, Snackbar, useTheme } from '@mui/material'
 import { useLockFn } from 'ahooks'
 import dayjs from 'dayjs'
+import { nanoid } from 'nanoid'
 import { useCallback, useImperativeHandle, useState, type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { closeConnection } from 'tauri-plugin-mihomo-api'
 
+import { useVerge } from '@/hooks/use-verge'
+import { showNotice } from '@/services/notice-service'
 import parseTraffic from '@/utils/parse-traffic'
 
 export interface ConnectionDetailRef {
@@ -129,7 +132,59 @@ const InnerConnectionDetail = ({ data, closed, onClose }: InnerProps) => {
     },
   ]
 
+  const { verge, patchVerge } = useVerge()
   const onDelete = useLockFn(async () => closeConnection(data.id))
+
+  const handleAddProcessRule = useCallback(
+    async (target: 'PROXY' | 'DIRECT' = 'PROXY') => {
+      const procName = metadata.process?.trim()
+      if (!procName) return
+      const currentRules = verge?.process_proxy_rules || []
+      if (
+        currentRules.some(
+          (r) => r.name.toLowerCase() === procName.toLowerCase(),
+        )
+      ) {
+        showNotice.info(t('settings.sections.processRules.duplicate'))
+        return
+      }
+
+      const newRule: IProcessRuleItem = {
+        id: nanoid(8),
+        name: procName,
+        path: metadata.processPath?.trim() || undefined,
+        enabled: true,
+        target,
+      }
+      await patchVerge({ process_proxy_rules: [...currentRules, newRule] })
+      try {
+        await closeConnection(data.id)
+      } catch {
+        // ignore if connection already terminated
+      }
+      if (target === 'DIRECT') {
+        showNotice.success(
+          t('connections.components.actions.directRuleAdded', {
+            name: procName,
+          }),
+        )
+      } else {
+        showNotice.success(
+          t('connections.components.actions.processRuleAdded', {
+            name: procName,
+          }),
+        )
+      }
+    },
+    [
+      data.id,
+      metadata.process,
+      metadata.processPath,
+      patchVerge,
+      t,
+      verge?.process_proxy_rules,
+    ],
+  )
 
   return (
     <Box sx={{ userSelect: 'text', color: theme.palette.text.secondary }}>
@@ -147,10 +202,39 @@ const InnerConnectionDetail = ({ data, closed, onClose }: InnerProps) => {
         </div>
       ))}
 
-      {!closed && (
-        <Box sx={{ textAlign: 'right' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 1,
+          mt: 1.5,
+          flexWrap: 'wrap',
+        }}
+      >
+        {Boolean(metadata.process) && (
+          <>
+            <Button
+              variant="outlined"
+              size="small"
+              color="success"
+              onClick={() => handleAddProcessRule('DIRECT')}
+            >
+              {t('connections.components.actions.addDirectRule')}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => handleAddProcessRule('PROXY')}
+            >
+              {t('connections.components.actions.addProcessRule')}
+            </Button>
+          </>
+        )}
+
+        {!closed && (
           <Button
             variant="contained"
+            size="small"
             title={t('connections.components.actions.closeConnection')}
             onClick={() => {
               onDelete()
@@ -159,8 +243,8 @@ const InnerConnectionDetail = ({ data, closed, onClose }: InnerProps) => {
           >
             {t('connections.components.actions.closeConnection')}
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
     </Box>
   )
 }

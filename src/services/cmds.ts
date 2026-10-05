@@ -540,3 +540,7 @@ export const probeListener = async (request: ListenerProbe) => {
 export const saveProxyPorts = async (settings: ProxyPortSettings) => {
   return invoke<SaveProxyPortsOutcome>('save_proxy_ports', { settings })
 }
+
+export const getRunningProcesses = async () => {
+  return invoke<IRunningProcessItem[]>('get_running_processes')
+}

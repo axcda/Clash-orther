@@ -152,6 +152,34 @@
           }
         }
       }
+    },
+    "processRules": {
+      "title": "进程代理规则",
+      "duplicate": "该进程规则已存在",
+      "added": "已添加进程规则: {{name}}",
+      "tunEnabled": "已开启 TUN 模式",
+      "enableTun": "开启 TUN 模式",
+      "tunWarning": "进程代理依赖 TUN（虚拟网卡）模式进行全流量进程嗅探，建议开启以确保完全生效。",
+      "addRunning": "添加运行中进程",
+      "browseExe": "选择本地程序 (.exe)",
+      "manualAdd": "手动输入",
+      "manualAddTitle": "手动输入进程规则",
+      "empty": "暂无进程代理规则，点击上方按钮添加",
+      "selectRunningTitle": "选择运行中的进程",
+      "searchPlaceholder": "搜索进程名称或路径...",
+      "noProcFound": "未找到匹配的进程",
+      "alreadyAdded": "已添加",
+      "procNameLabel": "进程文件名 (如 chrome.exe)",
+      "fetchError": "获取进程列表失败",
+      "selectError": "选择文件失败",
+      "targetDirect": "直连 (不走代理)",
+      "targetProxy": "走代理",
+      "targetReject": "拦截",
+      "addModeLabel": "添加为",
+      "filterAll": "全部",
+      "filterDirect": "直连 (不走代理)",
+      "filterProxy": "走代理",
+      "diagnosticTip": "提示：若应用具有独立网络子进程（如 VS Code/Antigravity 的 language_server、游戏主进程），系统会自动根据路径匹配其子进程并即时重置已有连接。若仍未生效，可在「连接」页面查看实际发包进程并一键添加。"
     }
   },
   "components": {
